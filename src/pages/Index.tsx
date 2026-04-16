@@ -49,13 +49,45 @@ function StarRating({ count }: { count: number }) {
 export default function Index() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [form, setForm] = useState({ name: "", phone: "" });
-  const [calcSize, setCalcSize] = useState("3");
+  const [calcSize, setCalcSize] = useState(3);
+  const [calcOptions, setCalcOptions] = useState<Record<string, boolean>>({
+    furnace: false,
+    cedar: false,
+    sideEntry: false,
+    shower: false,
+    glassDoor: false,
+    extraWindow: false,
+  });
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const prices: Record<string, number> = { "3": 120000, "4": 159000, "6": 218000 };
-  const delivery = 15000;
+  const basePricePerMeter = 35000;
+  const optionPrices: Record<string, number> = {
+    furnace: 25000,
+    cedar: 30000,
+    sideEntry: 15000,
+    shower: 20000,
+    glassDoor: 12000,
+    extraWindow: 8000,
+  };
+  const optionLabels: Record<string, string> = {
+    furnace: "Угольно-дровяная печь",
+    cedar: "Кедровая вагонка в парной",
+    sideEntry: "Боковой вход",
+    shower: "Душ",
+    glassDoor: "Стеклянная дверь",
+    extraWindow: "Дополнительное окно",
+  };
+  const basePrice = calcSize * basePricePerMeter;
+  const optionsTotal = Object.entries(calcOptions).reduce(
+    (sum, [key, checked]) => sum + (checked ? optionPrices[key] : 0), 0
+  );
+  const totalPrice = basePrice + optionsTotal;
+
+  function toggleOption(key: string) {
+    setCalcOptions(prev => ({ ...prev, [key]: !prev[key] }));
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -240,56 +272,80 @@ export default function Index() {
         </div>
       </section>
 
-      {/* РАСЧЁТ ДОСТАВКИ */}
+      {/* КАЛЬКУЛЯТОР */}
       <section id="calc" className="py-14" style={{ background: "var(--cream)" }}>
         <div className="max-w-4xl mx-auto px-4">
-          <h2 className="section-title">Расчёт стоимости доставки</h2>
-          <p className="text-center text-gray-500 font-body mb-8">Укажите размер — стоимость доставки рассчитается автоматически</p>
+          <h2 className="section-title">Калькулятор стоимости</h2>
+          <p className="text-center text-gray-500 font-body mb-8">Выберите длину и опции — стоимость рассчитается автоматически</p>
           <div className="bg-white rounded-2xl shadow-md p-8">
-            <div className="flex flex-col md:flex-row gap-6 items-start">
+            <div className="flex flex-col md:flex-row gap-8 items-start">
               <div className="flex-1">
-                <label className="block font-body font-semibold mb-2" style={{ color: "var(--brown)" }}>Размер бани-бочки</label>
-                <div className="flex gap-3">
-                  {["3", "4", "6"].map((s) => (
-                    <button
-                      key={s}
-                      onClick={() => setCalcSize(s)}
-                      className="flex-1 py-3 rounded-xl font-display font-semibold text-lg border-2 transition-all cursor-pointer"
-                      style={calcSize === s
-                        ? { background: "var(--green)", borderColor: "var(--green)", color: "white" }
-                        : { background: "white", borderColor: "var(--beige-dark)", color: "var(--brown)" }
-                      }
-                    >
-                      {s} м
-                    </button>
+                <label className="block font-body font-semibold mb-3" style={{ color: "var(--brown)" }}>
+                  Длина бани: <span style={{ color: "var(--green)" }}>{calcSize} м</span>
+                </label>
+                <input
+                  type="range"
+                  min={3}
+                  max={9}
+                  step={1}
+                  value={calcSize}
+                  onChange={e => setCalcSize(Number(e.target.value))}
+                  className="w-full h-2 rounded-full appearance-none cursor-pointer mb-1"
+                  style={{ accentColor: "var(--green)" }}
+                />
+                <div className="flex justify-between text-xs font-body text-gray-400 mt-1 mb-6">
+                  {[3,4,5,6,7,8,9].map(n => <span key={n}>{n} м</span>)}
+                </div>
+
+                <label className="block font-body font-semibold mb-3" style={{ color: "var(--brown)" }}>Дополнительные опции</label>
+                <div className="flex flex-col gap-3">
+                  {Object.keys(calcOptions).map(key => (
+                    <label key={key} className="flex items-center gap-3 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={calcOptions[key]}
+                        onChange={() => toggleOption(key)}
+                        className="w-5 h-5 rounded cursor-pointer"
+                        style={{ accentColor: "var(--green)" }}
+                      />
+                      <span className="font-body text-sm flex-1" style={{ color: "var(--brown)" }}>
+                        {optionLabels[key]}
+                      </span>
+                      <span className="font-body text-sm font-semibold" style={{ color: "var(--green)" }}>
+                        +{optionPrices[key].toLocaleString("ru")} ₽
+                      </span>
+                    </label>
                   ))}
                 </div>
-                <label className="block font-body font-semibold mb-2 mt-5" style={{ color: "var(--brown)" }}>Ваш адрес</label>
-                <input
-                  type="text"
-                  placeholder="Введите адрес доставки"
-                  className="w-full border rounded-xl px-4 py-3 font-body text-sm focus:outline-none transition-all"
-                  style={{ borderColor: "var(--beige-dark)" }}
-                />
               </div>
-              <div className="md:w-56 rounded-2xl p-6 text-center" style={{ background: "var(--beige)" }}>
-                <p className="text-sm font-body text-gray-500 mb-1">Стоимость бани</p>
-                <p className="font-display text-2xl font-bold mb-3" style={{ color: "var(--brown)" }}>
-                  {prices[calcSize].toLocaleString("ru")} ₽
+
+              <div className="md:w-60 rounded-2xl p-6 text-center sticky top-24" style={{ background: "var(--beige)" }}>
+                <p className="text-sm font-body text-gray-500 mb-1">База ({calcSize} м)</p>
+                <p className="font-display text-xl font-bold mb-2" style={{ color: "var(--brown)" }}>
+                  {basePrice.toLocaleString("ru")} ₽
                 </p>
-                <p className="text-sm font-body text-gray-500 mb-1">Доставка</p>
-                <p className="font-display text-lg font-semibold mb-4" style={{ color: "var(--green)" }}>
-                  от {delivery.toLocaleString("ru")} ₽
-                </p>
-                <div className="border-t pt-3" style={{ borderColor: "var(--beige-dark)" }}>
-                  <p className="text-xs text-gray-400 font-body">Итого от</p>
-                  <p className="font-display text-2xl font-bold" style={{ color: "var(--brown)" }}>
-                    {(prices[calcSize] + delivery).toLocaleString("ru")} ₽
+                {optionsTotal > 0 && (
+                  <>
+                    <p className="text-sm font-body text-gray-500 mb-1">Опции</p>
+                    <p className="font-display text-xl font-semibold mb-2" style={{ color: "var(--green)" }}>
+                      +{optionsTotal.toLocaleString("ru")} ₽
+                    </p>
+                  </>
+                )}
+                <div className="border-t pt-4 mt-2" style={{ borderColor: "var(--beige-dark)" }}>
+                  <p className="text-xs text-gray-400 font-body mb-1">Итого</p>
+                  <p className="font-display text-3xl font-bold" style={{ color: "var(--brown)" }}>
+                    {totalPrice.toLocaleString("ru")} ₽
                   </p>
                 </div>
+                <button
+                  onClick={() => document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" })}
+                  className="btn-green mt-5 w-full text-sm px-4"
+                >
+                  Заказать баню
+                </button>
               </div>
             </div>
-            <button className="btn-green mt-6 w-full md:w-auto text-base px-10">Заказать доставку</button>
           </div>
         </div>
       </section>
