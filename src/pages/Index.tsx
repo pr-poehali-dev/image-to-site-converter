@@ -1,6 +1,8 @@
 import { useState } from "react";
 import Icon from "@/components/ui/icon";
 
+const EMAIL_FUNC_URL = "https://functions.poehali.dev/f7c444ad-19dc-4b8e-899c-4e0bf84c9443";
+
 const SAUNA_IMG = "https://cdn.poehali.dev/projects/821d946b-b312-4546-85af-06b1c52d04db/files/47bf194a-f51d-4458-9613-5c5ac7510f10.jpg";
 const GRILL_IMG = "https://cdn.poehali.dev/projects/821d946b-b312-4546-85af-06b1c52d04db/files/3780e3f1-d2c7-4609-b849-3e6c6ed5729f.jpg";
 const KUPEL_IMG = "https://cdn.poehali.dev/projects/821d946b-b312-4546-85af-06b1c52d04db/files/efc9a954-d5c3-4f33-8415-24a6ac3ebf5f.jpg";
@@ -49,13 +51,29 @@ export default function Index() {
   const [form, setForm] = useState({ name: "", phone: "" });
   const [calcSize, setCalcSize] = useState("3");
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const prices: Record<string, number> = { "3": 120000, "4": 159000, "6": 218000 };
   const delivery = 15000;
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setSubmitted(true);
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch(EMAIL_FUNC_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: form.name, phone: form.phone }),
+      });
+      if (!res.ok) throw new Error("Ошибка отправки");
+      setSubmitted(true);
+    } catch {
+      setError("Не удалось отправить заявку. Попробуйте позвонить по телефону.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -372,8 +390,11 @@ export default function Index() {
                 className="w-full rounded-xl px-5 py-3 font-body text-base text-white placeholder-white/50 border border-white/20 focus:outline-none focus:border-white/60 transition-all"
                 style={{ background: "rgba(255,255,255,0.1)" }}
               />
-              <button type="submit" className="w-full py-3 rounded-xl font-body font-bold text-base text-white transition-all hover:opacity-90 cursor-pointer" style={{ background: "var(--orange)" }}>
-                Перезвоните мне
+              {error && (
+                <p className="text-red-300 text-sm font-body">{error}</p>
+              )}
+              <button type="submit" disabled={loading} className="w-full py-3 rounded-xl font-body font-bold text-base text-white transition-all hover:opacity-90 cursor-pointer disabled:opacity-60" style={{ background: "var(--orange)" }}>
+                {loading ? "Отправляем..." : "Перезвоните мне"}
               </button>
               <p className="text-white/40 text-xs font-body">Нажимая кнопку, вы соглашаетесь с политикой конфиденциальности</p>
             </form>
